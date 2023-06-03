@@ -144,7 +144,7 @@ func commandCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 		fmt.Println("Hit newbet command")
 		margs := make([]interface{}, 0, len(options))
-		msgformat := i.Member.User.Username + "started a bet!" +
+		msgformat := i.Member.User.Username + " started a bet!" +
 			"\n"
 		if option, ok := optionMap["title"]; ok {
 			// Option values must be type asserted from interface{}.
