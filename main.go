@@ -137,11 +137,11 @@ func commandCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		margs := make([]interface{}, 0, len(options))
 		msgformat := i.Member.User.Username + " started a bet!" + "\n"
 		title, ok := optionMap["title"]
-		//		outcome1, ok := optionMap["outcome-1"]
-		//		outcome2, ok := optionMap["outcome-2"]
+		outcome1, ok := optionMap["outcome-1"]
+		outcome2, ok := optionMap["outcome-2"]
 		if ok {
-			margs = append(margs, title.StringValue())
-			msgformat += "> %s\n"
+			margs = append(margs, title.StringValue(), outcome1.StringValue(), outcome2.StringValue())
+			msgformat += "> %s\n > %s OR %s"
 		}
 
 		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -150,7 +150,6 @@ func commandCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				Content: fmt.Sprintf(
 					msgformat,
 					margs...,
-				//	outcome1.StringValue()+" "+outcome2.StringValue(),
 				),
 			},
 		}); err != nil {
