@@ -49,14 +49,14 @@ func main() {
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "outcome1",
-					Description: "Outcome option",
+					Name:        "outcome-1",
+					Description: "Outcome option 1",
 					Required:    true,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "outcome2",
-					Description: "Outcome option",
+					Name:        "outcome-2",
+					Description: "Outcome option 2",
 					Required:    true,
 				},
 			},
@@ -100,15 +100,6 @@ func main() {
 
 	if *RemoveCommands {
 		fmt.Println("Removing commands...")
-		// // We need to fetch the commands, since deleting requires the command ID.
-		// // We are doing this from the returned commands on line 375, because using
-		// // this will delete all the commands, which might not be desirable, so we
-		// // are deleting only the commands that we added.
-		// registeredCommands, err := s.ApplicationCommands(s.State.User.ID, *GuildID)
-		// if err != nil {
-		// 	log.Fatalf("Could not fetch registered commands: %v", err)
-		// }
-
 		for _, v := range registeredCommands {
 			err := dg.ApplicationCommandDelete(dg.State.User.ID, "", v.ID)
 			if err != nil {
@@ -144,20 +135,22 @@ func commandCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 		fmt.Println("Hit newbet command")
 		margs := make([]interface{}, 0, len(options))
-		msgformat := i.Member.User.Username + " started a bet!" +
-			"\n"
-		if option, ok := optionMap["title"]; ok {
-			// Option values must be type asserted from interface{}.
-			// Discordgo provides utility functions to make this simple.
-			margs = append(margs, option.StringValue())
+		msgformat := i.Member.User.Username + " started a bet!" + "\n"
+		title, ok := optionMap["title"]
+		//		outcome1, ok := optionMap["outcome-1"]
+		//		outcome2, ok := optionMap["outcome-2"]
+		if ok {
+			margs = append(margs, title.StringValue())
 			msgformat += "> %s\n"
 		}
+
 		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: fmt.Sprintf(
 					msgformat,
 					margs...,
+				//	outcome1.StringValue()+" "+outcome2.StringValue(),
 				),
 			},
 		}); err != nil {
