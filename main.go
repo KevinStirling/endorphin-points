@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,26 +10,78 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+var (
+	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutting down or not")
+	AppId          = flag.String("appid", os.Getenv("APP_ID"), "The registered discord app id")
+	DiscordToken   = flag.String("token", os.Getenv("DISCORD_TOKEN"), "Auth token for discord api")
+)
+
 func main() {
 	// Create a new session using the DISCORD_TOKEN environment variable from Railway
-	dg, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
+	dg, err := discordgo.New("Bot " + *DiscordToken)
 	if err != nil {
 		fmt.Printf("Error while starting bot: %s", err)
 		return
 	}
-	// create command
-	cmd := &discordgo.ApplicationCommand{Name: "test"}
-	_, err = dg.ApplicationCommandCreate(os.Getenv("APP_ID"), "", cmd)
+
+	// ---------------
+	// Server Commands
+	// ---------------
+
+	testCmd := &discordgo.ApplicationCommand{Name: "test", Description: "just a test"}
+	_, err = dg.ApplicationCommandCreate(*AppId, "", testCmd)
 	if err != nil {
 		fmt.Printf("Could not create command: %s ", err)
 		return
 	}
 
+	commands := []*discordgo.ApplicationCommand{
+
+		{
+			Name:        "newbet",
+			Description: "create new bet",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "title",
+					Description: "What are we bettin on, boys",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "outcome1",
+					Description: "Outcome option",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "outcome2",
+					Description: "Outcome option",
+					Required:    true,
+				},
+			},
+		},
+	}
+
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	for i, v := range commands {
+		cmd, err := dg.ApplicationCommandCreate(*AppId, "", v)
+		if err != nil {
+			fmt.Printf("Could not create new bet: %s  ", err)
+			return
+		}
+		registeredCommands[i] = cmd
+	}
+
+	// -------------------
+	// End Server Commands
+	// -------------------
+
+	// Add the command handler
+	dg.AddHandler(commandCreate)
+
 	// Add the message handler
 	dg.AddHandler(messageCreate)
-
-	// Add the test command handler
-	dg.AddHandler(commandCreate)
 
 	// Add the Guild Messages intent
 	dg.Identify.Intents = discordgo.IntentsGuildMessages
@@ -45,6 +98,25 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
+	if *RemoveCommands {
+		fmt.Println("Removing commands...")
+		// // We need to fetch the commands, since deleting requires the command ID.
+		// // We are doing this from the returned commands on line 375, because using
+		// // this will delete all the commands, which might not be desirable, so we
+		// // are deleting only the commands that we added.
+		// registeredCommands, err := s.ApplicationCommands(s.State.User.ID, *GuildID)
+		// if err != nil {
+		// 	log.Fatalf("Could not fetch registered commands: %v", err)
+		// }
+
+		for _, v := range registeredCommands {
+			err := dg.ApplicationCommandDelete(dg.State.User.ID, "", v.ID)
+			if err != nil {
+				panic("Cannot delete " + v.Name + " command: " + err.Error())
+			}
+		}
+	}
+
 	// Close the Discord session
 	dg.Close()
 }
@@ -52,6 +124,7 @@ func main() {
 func commandCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	data := i.ApplicationCommandData()
+	options := i.ApplicationCommandData().Options
 	switch data.Name {
 	case "test":
 		fmt.Println("Hit test command")
@@ -64,6 +137,33 @@ func commandCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if err != nil {
 			panic(err.Error())
 		}
+	case "newbet":
+		optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
+		for _, opt := range options {
+			optionMap[opt.Name] = opt
+		}
+		fmt.Println("Hit newbet command")
+		margs := make([]interface{}, 0, len(options))
+		msgformat := i.Member.User.Username + "started a bet!" +
+			"\n"
+		if option, ok := optionMap["title"]; ok {
+			// Option values must be type asserted from interface{}.
+			// Discordgo provides utility functions to make this simple.
+			margs = append(margs, option.StringValue())
+			msgformat += "> %s\n"
+		}
+		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf(
+					msgformat,
+					margs...,
+				),
+			},
+		}); err != nil {
+			panic(err.Error())
+		}
+
 	}
 	return
 
@@ -75,13 +175,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if m.Content == "ping" {
-		s.ChannelMessageSend(m.ChannelID, "Pong 🏓")
+	if m.Content == "the body is bad" {
+		s.ChannelMessageSend(m.ChannelID, "the body is not g0000ooood!")
 		return
 	}
 
-	if m.Content == "hello" {
-		s.ChannelMessageSend(m.ChannelID, "Choo choo! 🚅")
-		return
-	}
 }
