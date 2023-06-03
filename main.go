@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -8,12 +9,17 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
 	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutting down or not")
 	AppId          = flag.String("appid", os.Getenv("APP_ID"), "The registered discord app id")
 	DiscordToken   = flag.String("token", os.Getenv("DISCORD_TOKEN"), "Auth token for discord api")
+	RedisHost      = flag.String("redis_host", os.Getenv("REDISHOST"), "Redis host addr")
+	RedisPort      = flag.String("redis_port", os.Getenv("REDISPORT"), "Redis port")
+	RedisUser      = flag.String("redis_user", os.Getenv("REDISUSER"), "Redis store username")
+	RedisPass      = flag.String("redis_pass", os.Getenv("REDISPASSWORD"), "Redis store password")
 )
 
 func main() {
@@ -22,6 +28,21 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error while starting bot: %s", err)
 		return
+	}
+
+	store := redis.NewClient(&redis.Options{
+		Addr:     *RedisHost + ":" + *RedisPort,
+		Username: *RedisUser,
+		Password: *RedisPass,
+	})
+
+	ctx := context.Background()
+
+	if ping := store.Ping(ctx); ping.Val() != "PONG" {
+		fmt.Printf("Failed to connect to Redis: %s", ping)
+		panic(ping)
+	} else {
+		fmt.Println("Redis connection established")
 	}
 
 	// ---------------
