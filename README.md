@@ -6,17 +6,6 @@ tags:
 - golang
 ---
 
-# DiscordGo Example
-
-This example starts a Discord bot using [discordgo](https://github.com/bwmarrin/discordgo) and [Golang](https://golang.org/).
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/TZ2dBZ)
-
-## ✨ Features
-
-- DiscordGo
-- Golang
-
 ## 💁‍♀️ How to use
 
 - Install dependencies `go mod download`
@@ -25,4 +14,6 @@ This example starts a Discord bot using [discordgo](https://github.com/bwmarrin/
 
 ## 📝 Notes
 
-The server started launches a Discord bot with a couple of basic commands. The code is located at `main.go`.
+When deploying via the cli, you may need to restart (not redloy!) from the web ui if a
+command is registering as invalid. This could have something to do with the RemoveCommand
+logic.

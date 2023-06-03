@@ -23,7 +23,6 @@ var (
 )
 
 func main() {
-	// Create a new session using the DISCORD_TOKEN environment variable from Railway
 	dg, err := discordgo.New("Bot " + *DiscordToken)
 	if err != nil {
 		fmt.Printf("Error while starting bot: %s", err)
@@ -39,11 +38,13 @@ func main() {
 	ctx := context.Background()
 
 	if ping := store.Ping(ctx); ping.Val() != "PONG" {
-		fmt.Printf("Failed to connect to Redis: %s", ping)
-		panic(ping)
+		fmt.Printf("Failed to connect to Redis: %s", ping.Err().Error())
+		panic(ping.Err().Error())
 	} else {
 		fmt.Println("Redis connection established")
 	}
+
+	ctx.Done()
 
 	// ---------------
 	// Server Commands
@@ -85,12 +86,14 @@ func main() {
 	}
 
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	fmt.Println("Creating commands...")
 	for i, v := range commands {
 		cmd, err := dg.ApplicationCommandCreate(*AppId, "", v)
 		if err != nil {
-			fmt.Printf("Could not create new bet: %s  ", err)
+			fmt.Printf("Could not create command : %s , error: %s \n", cmd.Name, err)
 			return
 		}
+		fmt.Printf("Successfully created command: %s \n", cmd.Name)
 		registeredCommands[i] = cmd
 	}
 
@@ -124,13 +127,14 @@ func main() {
 		for _, v := range registeredCommands {
 			err := dg.ApplicationCommandDelete(dg.State.User.ID, "", v.ID)
 			if err != nil {
-				panic("Cannot delete " + v.Name + " command: " + err.Error())
+				fmt.Printf("Cannot delete " + v.Name + " command: " + err.Error())
 			}
 		}
 	}
 
 	// Close the Discord session
 	dg.Close()
+
 }
 
 func commandCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
