@@ -35,16 +35,12 @@ func main() {
 		Password: *RedisPass,
 	})
 
-	ctx := context.Background()
-
-	if ping := store.Ping(ctx); ping.Val() != "PONG" {
+	if ping := store.Ping(context.Background()); ping.Val() != "PONG" {
 		fmt.Printf("Failed to connect to Redis: %s", ping.Err().Error())
 		panic(ping.Err().Error())
 	} else {
 		fmt.Println("Redis connection established")
 	}
-
-	ctx.Done()
 
 	// ---------------
 	// Server Commands
@@ -133,7 +129,7 @@ func main() {
 	}
 
 	// Close the Discord session
-	dg.Close()
+	defer dg.Close()
 
 }
 
